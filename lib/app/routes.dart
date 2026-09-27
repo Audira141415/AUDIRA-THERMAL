@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:audira_receipt/features/dashboard/dashboard_page.dart';
 import 'package:audira_receipt/features/printer/bluetooth_scan_page.dart';
+import 'package:audira_receipt/features/printer/printer_connected_page.dart';
 import 'package:audira_receipt/features/printer/printer_test_page.dart';
 import 'package:audira_receipt/features/receipt/receipt_detail_page.dart';
 import 'package:audira_receipt/features/receipt/receipt_form_page.dart';
@@ -20,6 +21,7 @@ class AppRoutes {
   static const String receiptDetail = '/receipt/detail';
   static const String printer = '/printer';
   static const String printerScan = '/printer/scan';
+  static const String printerConnected = '/printer/connected';
   static const String printerTest = '/printer/test';
   static const String settings = '/settings';
   static const String companyProfile = '/settings/company';
@@ -48,6 +50,8 @@ class AppRoutes {
         );
       case printerScan:
         return MaterialPageRoute(builder: (_) => const BluetoothScanPage());
+      case printerConnected:
+        return MaterialPageRoute(builder: (_) => const PrinterConnectedPage());
       case printerTest:
         return MaterialPageRoute(builder: (_) => const PrinterTestPage());
       case companyProfile:

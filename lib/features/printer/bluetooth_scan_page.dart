@@ -14,15 +14,26 @@ class BluetoothScanPage extends StatefulWidget {
   State<BluetoothScanPage> createState() => _BluetoothScanPageState();
 }
 
-class _BluetoothScanPageState extends State<BluetoothScanPage> {
-  String _selectedPaperSize = AppConstants.paper58mm;
+class _BluetoothScanPageState extends State<BluetoothScanPage> with SingleTickerProviderStateMixin {
+  late AnimationController _radarController;
 
   @override
   void initState() {
     super.initState();
+    _radarController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _startScan();
     });
+  }
+
+  @override
+  void dispose() {
+    _radarController.dispose();
+    super.dispose();
   }
 
   Future<void> _startScan() async {
@@ -38,7 +49,7 @@ class _BluetoothScanPageState extends State<BluetoothScanPage> {
     final repo = context.read<ReceiptRepository>();
 
     final printerWithConfig = printer.copyWith(
-      paperSize: _selectedPaperSize,
+      paperSize: AppConstants.paper58mm,
       isDefault: true,
     );
 
@@ -69,238 +80,231 @@ class _BluetoothScanPageState extends State<BluetoothScanPage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Scan Printer Bluetooth'),
-        actions: [
-          if (isScanning)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              ),
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              tooltip: 'Scan Ulang',
-              onPressed: _startScan,
-            ),
-        ],
+        title: const Text('Scan Bluetooth'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: Column(
         children: [
-          // Paper size selector banner
+          // 1. Radar Pulse Animation Card
           Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
             color: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
               children: [
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Pilih Ukuran Kertas Printer',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.text),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      'Terapkan untuk printer yang akan dihubungkan',
-                      style: TextStyle(fontSize: 11, color: AppColors.secondaryText),
-                    ),
-                  ],
+                SizedBox(
+                  width: 120,
+                  height: 120,
+                  child: AnimatedBuilder(
+                    animation: _radarController,
+                    builder: (context, child) {
+                      return Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // Outer ripple
+                          if (isScanning) ...[
+                            Container(
+                              width: 120 * _radarController.value,
+                              height: 120 * _radarController.value,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: AppColors.primary.withOpacity((1 - _radarController.value) * 0.25),
+                              ),
+                            ),
+                            Container(
+                              width: 90 * _radarController.value,
+                              height: 90 * _radarController.value,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: AppColors.primary.withOpacity((1 - _radarController.value) * 0.35),
+                              ),
+                            ),
+                          ],
+                          // Center Bluetooth Icon Circle
+                          Container(
+                            width: 60,
+                            height: 60,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: AppColors.primary,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.primary.withOpacity(0.3),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(Icons.bluetooth_rounded, color: Colors.white, size: 30),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
                 ),
-                SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(value: '58mm', label: Text('58mm', style: TextStyle(fontSize: 12))),
-                    ButtonSegment(value: '80mm', label: Text('80mm', style: TextStyle(fontSize: 12))),
-                  ],
-                  selected: {_selectedPaperSize},
-                  onSelectionChanged: (val) {
-                    setState(() {
-                      _selectedPaperSize = val.first;
-                    });
-                  },
+                const SizedBox(height: 14),
+                Text(
+                  isScanning ? 'Mencari printer...' : 'Pencarian Selesai',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.text,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                const Text(
+                  'Pastikan printer dalam mode pairing',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.secondaryText,
+                  ),
                 ),
               ],
             ),
           ),
           const Divider(height: 1, color: AppColors.border),
 
-          // Instructions Card
+          // 2. Section Header: Perangkat Ditemukan
           Padding(
-            padding: const EdgeInsets.all(16),
-            child: Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.primary.withOpacity(0.2)),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.info_outline, color: AppColors.primary, size: 20),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Pastikan Bluetooth HP aktif, Thermal Printer dalam keadaan ON, dan telah di-pairing di menu Bluetooth perangkat Android Anda.',
-                      style: TextStyle(fontSize: 12, color: AppColors.text, height: 1.3),
-                    ),
-                  ),
-                ],
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Perangkat Ditemukan (${devices.length})',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.secondaryText,
+                ),
               ),
             ),
           ),
 
-          // Devices List
+          // 3. Devices List
           Expanded(
-            child: isScanning
+            child: devices.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        CircularProgressIndicator(strokeWidth: 2.5),
-                        SizedBox(height: 16),
-                        Text(
-                          'Sedang mencari printer Bluetooth...',
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.text),
+                      children: [
+                        const Icon(Icons.bluetooth_searching_rounded, size: 48, color: AppColors.mutedText),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Belum Ada Perangkat Ditemukan',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.text),
                         ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Mendeteksi perangkat yang terpasang (paired)',
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Pastikan Bluetooth aktif dan dekat dengan printer',
                           style: TextStyle(fontSize: 12, color: AppColors.secondaryText),
                         ),
                       ],
                     ),
                   )
-                : devices.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: devices.length,
+                    itemBuilder: (ctx, i) {
+                      final printer = devices[i];
+                      final isCurrent = btService.isConnected &&
+                          btService.connectedPrinter?.macAddress == printer.macAddress;
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: isCurrent ? AppColors.success : AppColors.border),
+                        ),
+                        child: Row(
                           children: [
-                            const Icon(
-                              Icons.bluetooth_searching,
-                              size: 56,
-                              color: AppColors.mutedText,
-                            ),
-                            const SizedBox(height: 16),
-                            const Text(
-                              'Printer Tidak Ditemukan',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.text),
-                            ),
-                            const SizedBox(height: 6),
-                            const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 32),
-                              child: Text(
-                                'Pastikan printer Bluetooth telah di-pairing di pengaturan Bluetooth Android terlebih dahulu.',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(fontSize: 13, color: AppColors.secondaryText),
+                            Container(
+                              width: 38,
+                              height: 38,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: isCurrent ? AppColors.successLight : const Color(0xFFF1F5F9),
+                              ),
+                              child: Icon(
+                                Icons.print_outlined,
+                                color: isCurrent ? AppColors.success : AppColors.secondaryText,
+                                size: 20,
                               ),
                             ),
-                            const SizedBox(height: 20),
-                            ElevatedButton.icon(
-                              onPressed: _startScan,
-                              icon: const Icon(Icons.refresh, size: 18),
-                              label: const Text('Cari Ulang'),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    printer.name,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.text,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    printer.macAddress,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.secondaryText,
+                                      fontFamily: 'monospace',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            ElevatedButton(
+                              onPressed: () => _connectToPrinter(printer),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: isCurrent ? AppColors.success : AppColors.primary,
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                              ),
+                              child: Text(isCurrent ? 'TERHUBUNG' : 'HUBUNGKAN'),
                             ),
                           ],
                         ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-                        itemCount: devices.length,
-                        itemBuilder: (ctx, i) {
-                          final printer = devices[i];
-                          final isCurrentlyConnected = btService.isConnected &&
-                              btService.connectedPrinter?.macAddress == printer.macAddress;
+                      );
+                    },
+                  ),
+          ),
 
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 10),
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: isCurrentlyConnected ? AppColors.success : AppColors.border,
-                                width: isCurrentlyConnected ? 1.5 : 1,
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: isCurrentlyConnected
-                                        ? AppColors.successLight
-                                        : AppColors.primaryLight.withOpacity(0.4),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    Icons.print_outlined,
-                                    color: isCurrentlyConnected ? AppColors.success : AppColors.primary,
-                                    size: 22,
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        printer.name,
-                                        style: const TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.text,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 3),
-                                      Text(
-                                        printer.macAddress,
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          color: AppColors.secondaryText,
-                                          fontFamily: 'monospace',
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                if (isCurrentlyConnected)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.successLight,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: const Text(
-                                      '🟢 Terhubung',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.success,
-                                      ),
-                                    ),
-                                  )
-                                else
-                                  ElevatedButton(
-                                    onPressed: () => _connectToPrinter(printer),
-                                    style: ElevatedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                    ),
-                                    child: const Text('Hubungkan'),
-                                  ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
+          // 4. Bottom Button: [BERHENTI SCAN / SCAN ULANG]
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: OutlinedButton(
+                onPressed: () {
+                  if (isScanning) {
+                    setState(() {});
+                  } else {
+                    _startScan();
+                  }
+                },
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AppColors.primary, width: 1.2),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: Text(
+                  isScanning ? 'BERHENTI SCAN' : 'SCAN ULANG',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.primary,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ),
           ),
         ],
       ),

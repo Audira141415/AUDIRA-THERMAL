@@ -24,14 +24,14 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
     );
 
     _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeIn);
-    _scaleAnim = Tween<double>(begin: 0.85, end: 1.0).animate(
+    _scaleAnim = Tween<double>(begin: 0.88, end: 1.0).animate(
       CurvedAnimation(parent: _animController, curve: Curves.easeOutBack),
     );
 
     _animController.forward();
 
-    // Navigate to main dashboard after brief delay
-    Future.delayed(const Duration(milliseconds: 1400), () {
+    // Navigate to dashboard
+    Future.delayed(const Duration(milliseconds: 1600), () {
       if (mounted) {
         Navigator.pushReplacementNamed(context, AppRoutes.main);
       }
@@ -47,74 +47,114 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Center(
-        child: FadeTransition(
-          opacity: _fadeAnim,
-          child: ScaleTransition(
-            scale: _scaleAnim,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Icon logo
-                Container(
-                  width: 90,
-                  height: 90,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withOpacity(0.3),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
+      backgroundColor: AppColors.primary,
+      body: SafeArea(
+        child: Column(
+          children: [
+            const Spacer(flex: 3),
+
+            // Center Branding
+            FadeTransition(
+              opacity: _fadeAnim,
+              child: ScaleTransition(
+                scale: _scaleAnim,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Printer Icon
+                    Container(
+                      width: 96,
+                      height: 96,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(28),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.12),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.receipt_long_rounded,
-                    color: Colors.white,
-                    size: 48,
-                  ),
-                ),
-                const SizedBox(height: 24),
+                      child: const Center(
+                        child: Icon(
+                          Icons.print_rounded,
+                          size: 54,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
 
-                // Title
-                const Text(
-                  AppConstants.appName,
-                  style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.text,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(height: 6),
+                    // App Title
+                    const Text(
+                      AppConstants.appName,
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
 
-                // Subtitle
-                const Text(
-                  AppConstants.appSubtitle,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.secondaryText,
-                    letterSpacing: 0.2,
-                  ),
-                ),
-                const SizedBox(height: 36),
+                    // Subtitle
+                    const Text(
+                      AppConstants.appSubtitle,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
 
-                // Spinner indicator
-                const SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.2,
-                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                  ),
+                    // Version
+                    const Text(
+                      'v2.0.0',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
+
+            const Spacer(flex: 3),
+
+            // Bottom Progress Bar & Loading Text
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 56),
+              child: Column(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: const SizedBox(
+                      height: 4,
+                      child: LinearProgressIndicator(
+                        backgroundColor: Colors.white24,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Memuat aplikasi...',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 36),
+          ],
         ),
       ),
     );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:audira_receipt/app/routes.dart';
@@ -6,8 +7,8 @@ import 'package:audira_receipt/core/constants/app_colors.dart';
 import 'package:audira_receipt/core/constants/app_constants.dart';
 import 'package:audira_receipt/core/services/receipt_service.dart';
 import 'package:audira_receipt/core/utils/currency_formatter.dart';
+import 'package:audira_receipt/core/utils/number_to_words.dart';
 import 'package:audira_receipt/models/receipt.dart';
-import 'package:audira_receipt/widgets/amount_field.dart';
 import 'package:audira_receipt/widgets/custom_dialogs.dart';
 
 class ReceiptFormPage extends StatefulWidget {
@@ -30,6 +31,8 @@ class _ReceiptFormPageState extends State<ReceiptFormPage> {
 
   late DateTime _selectedDate;
   late String _selectedPaymentMethod;
+  String _amountWords = '';
+  int _printCopies = 1;
   bool _isLoadingNumber = false;
   bool _isSaving = false;
 
@@ -47,11 +50,24 @@ class _ReceiptFormPageState extends State<ReceiptFormPage> {
     _notesController = TextEditingController(text: receipt?.notes ?? '');
 
     _selectedDate = receipt?.date ?? DateTime.now();
-    _selectedPaymentMethod = receipt?.paymentMethod ?? AppConstants.paymentMethods.first;
+    _selectedPaymentMethod = receipt?.paymentMethod ?? 'Transfer Bank';
+
+    if (receipt != null) {
+      _amountWords = receipt.amountWords;
+    }
+
+    _amountController.addListener(_updateTerbilang);
 
     if (receipt == null) {
       _loadNextReceiptNumber();
     }
+  }
+
+  void _updateTerbilang() {
+    final amount = CurrencyFormatter.parse(_amountController.text);
+    setState(() {
+      _amountWords = amount > 0 ? NumberToWords.convert(amount) : '';
+    });
   }
 
   Future<void> _loadNextReceiptNumber() async {
@@ -74,6 +90,7 @@ class _ReceiptFormPageState extends State<ReceiptFormPage> {
 
   @override
   void dispose() {
+    _amountController.removeListener(_updateTerbilang);
     _receiptNumberController.dispose();
     _receivedFromController.dispose();
     _amountController.dispose();
@@ -172,307 +189,310 @@ class _ReceiptFormPageState extends State<ReceiptFormPage> {
     final isEditing = widget.editReceipt != null;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text(isEditing ? 'Edit Kwitansi' : 'Buat Kwitansi'),
-        actions: [
-          if (_isSaving)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              ),
-            )
-          else
-            TextButton.icon(
-              onPressed: () => _saveReceipt(goToPreview: true),
-              icon: const Icon(Icons.remove_red_eye_outlined, size: 18),
-              label: const Text('Preview'),
-            ),
-        ],
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Card Section 1: Number & Date
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border),
+              // 1. Nomor Kwitansi
+              _buildFieldLabel('Nomor Kwitansi'),
+              TextFormField(
+                controller: _receiptNumberController,
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                decoration: InputDecoration(
+                  hintText: 'AUD-2026-00014',
+                  suffixIcon: _isLoadingNumber
+                      ? const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        )
+                      : IconButton(
+                          icon: const Icon(Icons.refresh_rounded, color: AppColors.secondaryText),
+                          onPressed: _loadNextReceiptNumber,
+                          tooltip: 'Generate Nomor Baru',
+                        ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                validator: (val) => val == null || val.trim().isEmpty ? 'Wajib diisi' : null,
+              ),
+              const SizedBox(height: 16),
+
+              // 2. Tanggal
+              _buildFieldLabel('Tanggal'),
+              InkWell(
+                onTap: _pickDate,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_today_outlined, size: 18, color: AppColors.secondaryText),
+                      const SizedBox(width: 12),
+                      Text(
+                        DateFormat('dd MMMM yyyy', 'id_ID').format(_selectedDate),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.text,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // 3. Diterima Dari
+              _buildFieldLabel('Diterima Dari'),
+              TextFormField(
+                controller: _receivedFromController,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  hintText: 'Nama Pembayar',
+                  prefixIcon: Icon(Icons.person_outline, size: 20, color: AppColors.secondaryText),
+                ),
+                validator: (val) => val == null || val.trim().isEmpty ? 'Nama pembayar wajib diisi' : null,
+              ),
+              const SizedBox(height: 16),
+
+              // 4. Nominal
+              _buildFieldLabel('Nominal'),
+              TextFormField(
+                controller: _amountController,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  IndonesianCurrencyInputFormatter(),
+                ],
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                decoration: InputDecoration(
+                  prefixIcon: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                    child: const Text(
+                      'Rp',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.text),
+                    ),
+                  ),
+                  suffixIcon: _amountController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.close, size: 18),
+                          onPressed: () => _amountController.clear(),
+                        )
+                      : null,
+                ),
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) return 'Nominal wajib diisi';
+                  if (CurrencyFormatter.parse(val) <= 0) return 'Nominal harus lebih dari 0';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 10),
+
+              // 5. Terbilang (otomatis) Light Green Box
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDF4),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFBBF7D0)),
+                ),
+                child: Row(
                   children: [
-                    const Text(
-                      'Informasi Kwitansi',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.text,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Receipt Number Field
-                    TextFormField(
-                      controller: _receiptNumberController,
-                      decoration: InputDecoration(
-                        labelText: 'Nomor Kwitansi *',
-                        hintText: 'AUD-2026-00001',
-                        prefixIcon: const Icon(Icons.tag, color: AppColors.secondaryText, size: 20),
-                        suffixIcon: _isLoadingNumber
-                            ? const Padding(
-                                padding: EdgeInsets.all(12),
-                                child: SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                ),
-                              )
-                            : IconButton(
-                                icon: const Icon(Icons.refresh, size: 20),
-                                tooltip: 'Generate Nomor Baru',
-                                onPressed: _loadNextReceiptNumber,
-                              ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Nomor kwitansi tidak boleh kosong';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Date Picker Input
-                    InkWell(
-                      onTap: _pickDate,
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.calendar_today_outlined,
-                                  color: AppColors.secondaryText,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 12),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'Tanggal Kwitansi',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: AppColors.secondaryText,
-                                      ),
-                                    ),
-                                    Text(
-                                      DateFormat('dd MMMM yyyy', 'id_ID').format(_selectedDate),
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.text,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Terbilang (otomatis)',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF166534),
                             ),
-                            const Icon(
-                              Icons.edit_calendar,
-                              color: AppColors.primary,
-                              size: 20,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _amountWords.isNotEmpty ? _amountWords : 'Nol Rupiah',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF15803D),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
+                    if (_amountWords.isNotEmpty)
+                      IconButton(
+                        icon: const Icon(Icons.copy_rounded, size: 18, color: Color(0xFF166534)),
+                        tooltip: 'Salin Terbilang',
+                        onPressed: () {
+                          Clipboard.setData(ClipboardData(text: _amountWords));
+                          CustomDialogs.showSuccessSnackBar(context, 'Terbilang disalin ke clipboard');
+                        },
+                      ),
                   ],
                 ),
               ),
               const SizedBox(height: 16),
 
-              // Card Section 2: Payer & Amount
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border),
+              // 6. Untuk Pembayaran
+              _buildFieldLabel('Untuk Pembayaran'),
+              TextFormField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(
+                  hintText: 'Contoh: Jasa Maintenance Server',
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Penerimaan & Nominal',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.text,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Received From
-                    TextFormField(
-                      controller: _receivedFromController,
-                      textCapitalization: TextCapitalization.words,
-                      decoration: const InputDecoration(
-                        labelText: 'Telah Diterima Dari *',
-                        hintText: 'Nama lengkap pembayar / instansi',
-                        prefixIcon: Icon(Icons.person_outline, color: AppColors.secondaryText, size: 20),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Nama pembayar wajib diisi';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Amount with Auto-Terbilang
-                    AmountField(
-                      controller: _amountController,
-                      initialAmountWords: widget.editReceipt?.amountWords,
-                    ),
-                  ],
-                ),
+                validator: (val) => val == null || val.trim().isEmpty ? 'Keterangan wajib diisi' : null,
               ),
               const SizedBox(height: 16),
 
-              // Card Section 3: Purpose, Method, Notes
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border),
+              // 7. Metode Pembayaran
+              _buildFieldLabel('Metode Pembayaran'),
+              DropdownButtonFormField<String>(
+                initialValue: _selectedPaymentMethod,
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.person_outline, size: 20, color: AppColors.secondaryText),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Detail Transaksi',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.text,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
+                items: AppConstants.paymentMethods.map((m) {
+                  return DropdownMenuItem(value: m, child: Text(m));
+                }).toList(),
+                onChanged: (val) {
+                  if (val != null) setState(() => _selectedPaymentMethod = val);
+                },
+              ),
+              const SizedBox(height: 16),
 
-                    // Description / Untuk Pembayaran
-                    TextFormField(
-                      controller: _descriptionController,
-                      maxLines: 2,
-                      decoration: const InputDecoration(
-                        labelText: 'Untuk Pembayaran *',
-                        hintText: 'Contoh: Jasa Maintenance Server / Pembelian Hardware',
-                        alignLabelWithHint: true,
-                        prefixIcon: Padding(
-                          padding: EdgeInsets.only(bottom: 24),
-                          child: Icon(Icons.description_outlined, color: AppColors.secondaryText, size: 20),
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Keterangan pembayaran wajib diisi';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Payment Method Dropdown
-                    DropdownButtonFormField<String>(
-                      initialValue: _selectedPaymentMethod,
-                      decoration: const InputDecoration(
-                        labelText: 'Metode Pembayaran',
-                        prefixIcon: Icon(Icons.payment_outlined, color: AppColors.secondaryText, size: 20),
-                      ),
-                      items: AppConstants.paymentMethods.map((method) {
-                        return DropdownMenuItem(
-                          value: method,
-                          child: Text(method),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) {
-                          setState(() => _selectedPaymentMethod = val);
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Notes (Optional)
-                    TextFormField(
-                      controller: _notesController,
-                      maxLines: 2,
-                      decoration: const InputDecoration(
-                        labelText: 'Catatan Tambahan (Opsional)',
-                        hintText: 'Catatan internal atau nomor referensi',
-                        alignLabelWithHint: true,
-                        prefixIcon: Padding(
-                          padding: EdgeInsets.only(bottom: 24),
-                          child: Icon(Icons.note_alt_outlined, color: AppColors.secondaryText, size: 20),
-                        ),
-                      ),
-                    ),
-                  ],
+              // 8. Catatan (Opsional)
+              _buildFieldLabel('Catatan (Opsional)'),
+              TextFormField(
+                controller: _notesController,
+                decoration: const InputDecoration(
+                  hintText: '-',
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 18),
 
-              // Action Buttons
+              // 9. Jumlah Cetak Stepper Counter
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Jumlah Cetak',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.secondaryText,
+                    ),
+                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          onPressed: _printCopies > 1 ? () => setState(() => _printCopies--) : null,
+                          icon: const Icon(Icons.remove, size: 16),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text(
+                            '$_printCopies',
+                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => setState(() => _printCopies++),
+                          icon: const Icon(Icons.add, size: 16),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 28),
+
+              // 10. Bottom Action Buttons: [SIMPAN] and [PREVIEW →]
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _saveReceipt(goToPreview: false),
-                      icon: const Icon(Icons.save_outlined, size: 20),
-                      label: const Text('Simpan Saja'),
+                    child: OutlinedButton(
+                      onPressed: _isSaving ? null : () => _saveReceipt(goToPreview: false),
                       style: OutlinedButton.styleFrom(
+                        backgroundColor: const Color(0xFFF1F5F9),
+                        side: const BorderSide(color: Color(0xFFCBD5E1)),
                         padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text(
+                        'SIMPAN',
+                        style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.text),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 14),
                   Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () => _saveReceipt(goToPreview: true),
-                      icon: const Icon(Icons.print_outlined, size: 20),
-                      label: const Text('Simpan & Cetak'),
+                    child: ElevatedButton(
+                      onPressed: _isSaving ? null : () => _saveReceipt(goToPreview: true),
                       style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
                         padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'PREVIEW',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          SizedBox(width: 6),
+                          Icon(Icons.arrow_forward_rounded, size: 18),
+                        ],
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 32),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFieldLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: AppColors.secondaryText,
         ),
       ),
     );

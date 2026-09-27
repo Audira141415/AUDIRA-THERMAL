@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:audira_receipt/core/constants/app_colors.dart';
 
 class AppTheme {
@@ -20,14 +21,21 @@ class AppTheme {
         onSurface: AppColors.text,
       ),
       appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.card,
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
         elevation: 0,
-        scrolledUnderElevation: 1,
-        centerTitle: false,
-        iconTheme: IconThemeData(color: AppColors.text),
+        scrolledUnderElevation: 0,
+        centerTitle: true,
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+        ),
+        iconTheme: IconThemeData(color: Colors.white),
+        actionsIconTheme: IconThemeData(color: Colors.white),
         titleTextStyle: TextStyle(
-          color: AppColors.text,
-          fontSize: 18,
+          color: Colors.white,
+          fontSize: 17,
           fontWeight: FontWeight.w700,
           letterSpacing: -0.2,
         ),
@@ -52,21 +60,21 @@ class AppTheme {
           ),
           textStyle: const TextStyle(
             fontSize: 15,
-            fontWeight: FontWeight.w600,
-            letterSpacing: -0.1,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.2,
           ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.primary,
-          side: const BorderSide(color: AppColors.primary, width: 1.5),
+          foregroundColor: AppColors.text,
+          side: const BorderSide(color: AppColors.border, width: 1.2),
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
           textStyle: const TextStyle(
-            fontSize: 15,
+            fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -107,14 +115,8 @@ class AppTheme {
         showUnselectedLabels: true,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
-      ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        elevation: 3,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(16)),
-        ),
+        selectedLabelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+        unselectedLabelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
       ),
     );
   }

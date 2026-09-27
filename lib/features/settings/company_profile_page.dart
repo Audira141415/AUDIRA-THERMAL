@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:audira_receipt/core/constants/app_colors.dart';
 import 'package:audira_receipt/core/services/receipt_service.dart';
+import 'package:audira_receipt/widgets/audira_logo.dart';
 import 'package:audira_receipt/widgets/custom_dialogs.dart';
 
 class CompanyProfilePage extends StatefulWidget {
@@ -71,158 +72,139 @@ class _CompanyProfilePageState extends State<CompanyProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Profil Perusahaan'),
+        title: const Text('Pengaturan Perusahaan'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Store Header Banner
+              // 1. Logo Perusahaan
+              const Text(
+                'Logo Perusahaan',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.secondaryText),
+              ),
+              const SizedBox(height: 8),
               Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: AppColors.border),
                 ),
                 child: Row(
                   children: [
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryLight.withOpacity(0.4),
-                        borderRadius: BorderRadius.circular(14),
+                    const AudiraLogoWidget(size: 32),
+                    const Spacer(),
+                    ElevatedButton(
+                      onPressed: () {
+                        CustomDialogs.showSuccessSnackBar(context, 'Logo default AUDIRA aktif');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
-                      child: const Icon(
-                        Icons.store_rounded,
-                        color: AppColors.primary,
-                        size: 30,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
-                            'Kop & Identitas Kwitansi',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.text,
-                            ),
-                          ),
-                          SizedBox(height: 3),
-                          Text(
-                            'Informasi ini akan dicetak pada bagian atas (header) setiap lembar kwitansi thermal.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.secondaryText,
-                              height: 1.3,
-                            ),
-                          ),
-                        ],
-                      ),
+                      child: const Text('Ubah Logo', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 18),
 
-              // Form fields
-              Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border),
+              // 2. Nama Perusahaan
+              const Text(
+                'Nama Perusahaan',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.secondaryText),
+              ),
+              const SizedBox(height: 6),
+              TextFormField(
+                controller: _nameController,
+                textCapitalization: TextCapitalization.words,
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                decoration: const InputDecoration(
+                  hintText: 'AUDIRA MULTIMEDIA DIGITAL',
                 ),
-                child: Column(
-                  children: [
-                    // Company Name
-                    TextFormField(
-                      controller: _nameController,
-                      textCapitalization: TextCapitalization.words,
-                      decoration: const InputDecoration(
-                        labelText: 'Nama Perusahaan / Toko *',
-                        hintText: 'Contoh: AUDIRA MULTIMEDIA DIGITAL',
-                        prefixIcon: Icon(Icons.business_outlined, size: 20),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Nama perusahaan tidak boleh kosong';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
+                validator: (val) => val == null || val.trim().isEmpty ? 'Nama wajib diisi' : null,
+              ),
+              const SizedBox(height: 18),
 
-                    // Address
-                    TextFormField(
-                      controller: _addressController,
-                      maxLines: 2,
-                      decoration: const InputDecoration(
-                        labelText: 'Alamat Lengkap',
-                        hintText: 'Contoh: Jl. Raya Digital No. 88, Jakarta',
-                        prefixIcon: Padding(
-                          padding: EdgeInsets.only(bottom: 24),
-                          child: Icon(Icons.location_on_outlined, size: 20),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Phone
-                    TextFormField(
-                      controller: _phoneController,
-                      keyboardType: TextInputType.phone,
-                      decoration: const InputDecoration(
-                        labelText: 'Nomor Telepon / WhatsApp',
-                        hintText: 'Contoh: +62 812-3456-7890',
-                        prefixIcon: Icon(Icons.phone_outlined, size: 20),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Email
-                    TextFormField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(
-                        labelText: 'Alamat Email',
-                        hintText: 'Contoh: info@audira.id',
-                        prefixIcon: Icon(Icons.email_outlined, size: 20),
-                      ),
-                    ),
-                  ],
+              // 3. Alamat
+              const Text(
+                'Alamat',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.secondaryText),
+              ),
+              const SizedBox(height: 6),
+              TextFormField(
+                controller: _addressController,
+                maxLines: 2,
+                style: const TextStyle(fontSize: 14),
+                decoration: const InputDecoration(
+                  hintText: 'Jl. Ahmad Yani No. 123, Batam',
                 ),
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 18),
 
-              // Save button
+              // 4. Telepon
+              const Text(
+                'Telepon',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.secondaryText),
+              ),
+              const SizedBox(height: 6),
+              TextFormField(
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                style: const TextStyle(fontSize: 14),
+                decoration: const InputDecoration(
+                  hintText: '0812 3456 7890',
+                ),
+              ),
+              const SizedBox(height: 18),
+
+              // 5. Email
+              const Text(
+                'Email',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.secondaryText),
+              ),
+              const SizedBox(height: 6),
+              TextFormField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                style: const TextStyle(fontSize: 14),
+                decoration: const InputDecoration(
+                  hintText: 'info@audira.co.id',
+                ),
+              ),
+              const SizedBox(height: 36),
+
+              // 6. [SIMPAN] Button
               SizedBox(
                 width: double.infinity,
-                height: 52,
-                child: ElevatedButton.icon(
+                height: 50,
+                child: ElevatedButton(
                   onPressed: _isSaving ? null : _handleSave,
-                  icon: _isSaving
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: _isSaving
                       ? const SizedBox(
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
-                      : const Icon(Icons.save_rounded, size: 20),
-                  label: const Text(
-                    'SIMPAN PERUBAHAN',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-                  ),
+                      : const Text(
+                          'SIMPAN',
+                          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, letterSpacing: 0.5),
+                        ),
                 ),
               ),
             ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:audira_receipt/app/routes.dart';
 import 'package:audira_receipt/core/constants/app_colors.dart';
@@ -54,7 +55,7 @@ class _ReceiptDetailPageState extends State<ReceiptDetailPage> {
       context: context,
       title: 'Hapus Kwitansi',
       message: 'Apakah Anda yakin ingin menghapus kwitansi nomor ${_receipt.receiptNumber}?',
-      confirmText: 'Ya, Hapus',
+      confirmText: 'Hapus',
       cancelText: 'Batal',
       isDestructive: true,
     );
@@ -87,116 +88,91 @@ class _ReceiptDetailPageState extends State<ReceiptDetailPage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('Detail #${_receipt.receiptNumber}'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit_outlined),
-            tooltip: 'Edit Kwitansi',
-            onPressed: _handleEdit,
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline, color: AppColors.danger),
-            tooltip: 'Hapus Kwitansi',
-            onPressed: _handleDelete,
-          ),
-        ],
+        title: const Text('Detail Kwitansi'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+        padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Amount Hero Card
+            // Top Header Card (Document Icon + Number + Date + Dicetak Badge)
             Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.primary, AppColors.primaryDark],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.25),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.border),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryLight,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.description_outlined,
+                      color: AppColors.primary,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
                           _receipt.receiptNumber,
                           style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.text,
                           ),
                         ),
-                      ),
-                      Text(
-                        _receipt.dateFormatted,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white70,
+                        const SizedBox(height: 2),
+                        Text(
+                          DateFormat('dd MMMM yyyy • HH:mm', 'id_ID').format(_receipt.date),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.secondaryText,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  const Text(
-                    'Nominal Kwitansi',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white70,
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    CurrencyFormatter.format(_receipt.amount),
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
                   Container(
-                    padding: const EdgeInsets.all(10),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(10),
+                      color: AppColors.successLight,
+                      borderRadius: BorderRadius.circular(6),
                     ),
-                    child: Text(
-                      'Terbilang: "${_receipt.amountWords}"',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.white,
-                        fontStyle: FontStyle.italic,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(Icons.check, size: 12, color: AppColors.success),
+                        SizedBox(width: 4),
+                        Text(
+                          'Dicetak',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.success,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
-            // Information Details Card
+            // Details List Card
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
@@ -207,46 +183,35 @@ class _ReceiptDetailPageState extends State<ReceiptDetailPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Rincian Pembayaran',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.text,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildDetailRow(
-                    icon: Icons.person_outline,
-                    label: 'Telah Diterima Dari',
+                  _buildDetailItem(
+                    label: 'Diterima Dari',
                     value: _receipt.receivedFrom,
-                    isBold: true,
                   ),
-                  const Divider(height: 24, color: AppColors.divider),
-                  _buildDetailRow(
-                    icon: Icons.description_outlined,
+                  const Divider(height: 22, color: AppColors.divider),
+                  _buildDetailItem(
+                    label: 'Nominal',
+                    value: CurrencyFormatter.format(_receipt.amount),
+                    isHighlight: true,
+                  ),
+                  const Divider(height: 22, color: AppColors.divider),
+                  _buildDetailItem(
+                    label: 'Terbilang',
+                    value: _receipt.amountWords,
+                  ),
+                  const Divider(height: 22, color: AppColors.divider),
+                  _buildDetailItem(
                     label: 'Untuk Pembayaran',
                     value: _receipt.description,
                   ),
-                  const Divider(height: 24, color: AppColors.divider),
-                  _buildDetailRow(
-                    icon: Icons.payment_outlined,
+                  const Divider(height: 22, color: AppColors.divider),
+                  _buildDetailItem(
                     label: 'Metode Pembayaran',
                     value: _receipt.paymentMethod,
                   ),
-                  if (_receipt.notes != null && _receipt.notes!.isNotEmpty) ...[
-                    const Divider(height: 24, color: AppColors.divider),
-                    _buildDetailRow(
-                      icon: Icons.note_alt_outlined,
-                      label: 'Catatan Tambahan',
-                      value: _receipt.notes!,
-                    ),
-                  ],
-                  const Divider(height: 24, color: AppColors.divider),
-                  _buildDetailRow(
-                    icon: Icons.access_time_outlined,
-                    label: 'Waktu Dibuat',
-                    value: _receipt.dateWithTimeFormatted,
+                  const Divider(height: 22, color: AppColors.divider),
+                  _buildDetailItem(
+                    label: 'Catatan',
+                    value: _receipt.notes != null && _receipt.notes!.isNotEmpty ? _receipt.notes! : '-',
                   ),
                 ],
               ),
@@ -255,59 +220,69 @@ class _ReceiptDetailPageState extends State<ReceiptDetailPage> {
         ),
       ),
       bottomNavigationBar: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        decoration: BoxDecoration(
+        padding: const EdgeInsets.all(16),
+        decoration: const BoxDecoration(
           color: Colors.white,
-          border: const Border(top: BorderSide(color: AppColors.border)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 10,
-              offset: const Offset(0, -3),
-            ),
-          ],
+          border: Border(top: BorderSide(color: AppColors.border)),
         ),
         child: SafeArea(
-          child: Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // [Preview] button
-              Expanded(
-                flex: 1,
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.pushNamed(
-                      context,
-                      AppRoutes.receiptPreview,
-                      arguments: _receipt,
-                    );
-                  },
-                  icon: const Icon(Icons.remove_red_eye_outlined, size: 18),
-                  label: const Text('Preview'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 14),
-
-              // [Reprint] button
-              Expanded(
-                flex: 2,
+              // 1. [🖨️ CETAK ULANG] Full Width Button
+              SizedBox(
+                width: double.infinity,
+                height: 48,
                 child: ElevatedButton.icon(
                   onPressed: _handlePrint,
                   icon: const Icon(Icons.print_rounded, size: 20),
                   label: const Text(
                     'CETAK ULANG',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.5,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: 0.5),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
+              ),
+              const SizedBox(height: 10),
+
+              // 2. Row: [EDIT] and [HAPUS]
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 44,
+                      child: OutlinedButton.icon(
+                        onPressed: _handleEdit,
+                        icon: const Icon(Icons.edit_outlined, size: 18),
+                        label: const Text('EDIT'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          side: const BorderSide(color: AppColors.primary, width: 1.2),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: SizedBox(
+                      height: 44,
+                      child: ElevatedButton.icon(
+                        onPressed: _handleDelete,
+                        icon: const Icon(Icons.delete_outline, size: 18),
+                        label: const Text('HAPUS'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFEF4444),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -316,39 +291,29 @@ class _ReceiptDetailPageState extends State<ReceiptDetailPage> {
     );
   }
 
-  Widget _buildDetailRow({
-    required IconData icon,
+  Widget _buildDetailItem({
     required String label,
     required String value,
-    bool isBold = false,
+    bool isHighlight = false,
   }) {
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 20, color: AppColors.secondaryText),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.secondaryText,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
-                  color: AppColors.text,
-                ),
-              ),
-            ],
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            color: AppColors.secondaryText,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: isHighlight ? 18 : 14,
+            fontWeight: isHighlight ? FontWeight.w900 : FontWeight.w700,
+            color: isHighlight ? AppColors.text : AppColors.text,
           ),
         ),
       ],

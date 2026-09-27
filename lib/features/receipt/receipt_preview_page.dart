@@ -7,7 +7,9 @@ import 'package:audira_receipt/core/services/printer_service.dart';
 import 'package:audira_receipt/core/services/receipt_service.dart';
 import 'package:audira_receipt/core/utils/currency_formatter.dart';
 import 'package:audira_receipt/models/receipt.dart';
+import 'package:audira_receipt/widgets/audira_logo.dart';
 import 'package:audira_receipt/widgets/custom_dialogs.dart';
+import 'package:audira_receipt/widgets/thermal_ticket_container.dart';
 
 class ReceiptPreviewPage extends StatefulWidget {
   final Receipt receipt;
@@ -64,279 +66,44 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
       backgroundColor: const Color(0xFFF1F5F9),
       appBar: AppBar(
         title: const Text('Preview Kwitansi'),
-        actions: [
-          // Paper size toggle selector
-          Container(
-            margin: const EdgeInsets.only(right: 12),
-            child: SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: '58mm', label: Text('58mm', style: TextStyle(fontSize: 12))),
-                ButtonSegment(value: '80mm', label: Text('80mm', style: TextStyle(fontSize: 12))),
-              ],
-              selected: {_currentPaperSize},
-              onSelectionChanged: (val) {
-                setState(() {
-                  _currentPaperSize = val.first;
-                });
-              },
-              style: SegmentedButton.styleFrom(
-                visualDensity: VisualDensity.compact,
-                selectedBackgroundColor: AppColors.primaryLight,
-                selectedForegroundColor: AppColors.primaryDark,
-              ),
-            ),
-          ),
-        ],
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
-        child: Center(
-          child: Container(
-            constraints: BoxConstraints(
-              maxWidth: is80mm ? 420 : 340,
-            ),
-            decoration: BoxDecoration(
-              color: AppColors.thermalPaper,
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-              border: Border.all(color: AppColors.thermalBorder.withOpacity(0.6)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: Column(
+        children: [
+          // Top Paper Size Selector Row
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Thermal Paper Header jagged top decoration
+                const Text(
+                  'Ukuran Kertas',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.secondaryText,
+                  ),
+                ),
                 Container(
-                  height: 10,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
-                    children: List.generate(
-                      24,
-                      (index) => Expanded(
-                        child: Container(
-                          color: index.isEven ? const Color(0xFFE2E8F0) : AppColors.thermalPaper,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                  child: Column(
                     children: [
-                      // Company Name
-                      Text(
-                        company.name.toUpperCase(),
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 17,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.thermalInk,
-                          letterSpacing: 0.5,
-                        ),
+                      _buildPaperOption(
+                        label: '58 mm',
+                        isSelected: !is80mm,
+                        onTap: () => setState(() => _currentPaperSize = AppConstants.paper58mm),
                       ),
-                      if (company.address.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          company.address,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 11,
-                            color: AppColors.thermalInk,
-                          ),
-                        ),
-                      ],
-                      if (company.phone.isNotEmpty) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          'Telp: ${company.phone}',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 11,
-                            color: AppColors.thermalInk,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 12),
-
-                      _buildThermalDivider('='),
-                      const SizedBox(height: 8),
-
-                      // Kwitansi Title
-                      const Text(
-                        'KWITANSI PEMBAYARAN',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 15,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.thermalInk,
-                          letterSpacing: 1.0,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      _buildThermalDivider('-'),
-                      const SizedBox(height: 10),
-
-                      // Receipt No & Date
-                      _buildThermalRow(
-                        left: 'No : ${widget.receipt.receiptNumber}',
-                        right: widget.receipt.dateFormatted,
-                      ),
-                      const SizedBox(height: 8),
-                      _buildThermalDivider('-'),
-                      const SizedBox(height: 12),
-
-                      // Telah Diterima Dari
-                      _buildThermalSection(
-                        label: 'Telah diterima dari:',
-                        value: widget.receipt.receivedFrom.toUpperCase(),
-                        isBold: true,
-                        fontSize: 14,
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Jumlah
-                      _buildThermalSection(
-                        label: 'Jumlah:',
-                        value: CurrencyFormatter.format(widget.receipt.amount),
-                        isBold: true,
-                        fontSize: 16,
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Terbilang
-                      _buildThermalSection(
-                        label: 'Terbilang:',
-                        value: widget.receipt.amountWords,
-                        isItalic: true,
-                        fontSize: 12,
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Untuk
-                      _buildThermalSection(
-                        label: 'Untuk Pembayaran:',
-                        value: widget.receipt.description,
-                        isBold: true,
-                        fontSize: 13,
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Metode Pembayaran & Catatan
-                      _buildThermalRow(
-                        left: 'Metode Bayar:',
-                        right: widget.receipt.paymentMethod,
-                      ),
-                      if (widget.receipt.notes != null && widget.receipt.notes!.isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        _buildThermalSection(
-                          label: 'Catatan:',
-                          value: widget.receipt.notes!,
-                          fontSize: 11,
-                        ),
-                      ],
-
-                      const SizedBox(height: 14),
-                      _buildThermalDivider('-'),
-                      const SizedBox(height: 18),
-
-                      // Signatures Area
-                      if (is80mm) ...[
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Penyetor,',
-                              style: TextStyle(fontFamily: 'monospace', fontSize: 12),
-                            ),
-                            Text(
-                              'Penerima,',
-                              style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 48),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              '(______________)',
-                              style: TextStyle(fontFamily: 'monospace', fontSize: 12),
-                            ),
-                            Text(
-                              '( ${company.name.split(' ').first} )',
-                              style: const TextStyle(
-                                fontFamily: 'monospace',
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ] else ...[
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: const [
-                              Text(
-                                'Penerima,',
-                                style: TextStyle(fontFamily: 'monospace', fontSize: 12),
-                              ),
-                              SizedBox(height: 44),
-                              Text(
-                                '(________________)',
-                                style: TextStyle(fontFamily: 'monospace', fontSize: 12),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-
-                      const SizedBox(height: 20),
-                      const Text(
-                        'Terima Kasih',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.thermalInk,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Harap simpan bukti pembayaran ini',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 10,
-                          color: AppColors.secondaryText,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildThermalDivider('='),
-                      const SizedBox(height: 8),
-
-                      Text(
-                        'AUDIRA RECEIPT • Thermal ESC/POS $_currentPaperSize',
-                        style: const TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 9,
-                          color: AppColors.mutedText,
-                        ),
+                      _buildPaperOption(
+                        label: '80 mm',
+                        isSelected: is80mm,
+                        onTap: () => setState(() => _currentPaperSize = AppConstants.paper80mm),
                       ),
                     ],
                   ),
@@ -344,90 +111,284 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
               ],
             ),
           ),
-        ),
-      ),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: const Border(top: BorderSide(color: AppColors.border)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 10,
-              offset: const Offset(0, -3),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Row(
-            children: [
-              // [EDIT] Button
-              Expanded(
-                flex: 1,
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.pushReplacementNamed(
-                      context,
-                      AppRoutes.receiptForm,
-                      arguments: widget.receipt,
-                    );
-                  },
-                  icon: const Icon(Icons.edit_outlined, size: 18),
-                  label: const Text('EDIT'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+          const Divider(height: 1, color: AppColors.border),
+
+          // Scrollable Thermal Ticket Preview
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
+              child: Center(
+                child: ThermalTicketContainer(
+                  maxWidth: is80mm ? 420 : 330,
+                  child: Column(
+                    children: [
+                      // Car Logo + AUDIRA MULTIMEDIA DIGITAL
+                      const AudiraLogoWidget(size: 40),
+                      const SizedBox(height: 6),
+                      Text(
+                        company.address.isNotEmpty ? company.address : 'Jl. Ahmad Yani No. 123, Batam',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 10,
+                          color: AppColors.thermalInk,
+                        ),
+                      ),
+                      Text(
+                        'Telp. ${company.phone.isNotEmpty ? company.phone : '0812 3456 7890'}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 10,
+                          color: AppColors.thermalInk,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      _buildDashedLine(),
+                      const SizedBox(height: 8),
+
+                      // KWITANSI Title
+                      const Text(
+                        'KWITANSI',
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.thermalInk,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+
+                      // Meta
+                      if (is80mm) ...[
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'No     : ${widget.receipt.receiptNumber}',
+                              style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+                            ),
+                            Text(
+                              'Tanggal : ${widget.receipt.dateFormatted}',
+                              style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+                            ),
+                          ],
+                        ),
+                      ] else ...[
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'No     : ${widget.receipt.receiptNumber}',
+                                style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+                              ),
+                              Text(
+                                'Tanggal: ${widget.receipt.dateFormatted}',
+                                style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 8),
+                      _buildDashedLine(),
+                      const SizedBox(height: 10),
+
+                      // Telah Diterima Dari
+                      _buildReceiptField(
+                        label: 'Telah diterima dari :',
+                        value: widget.receipt.receivedFrom.toUpperCase(),
+                        isBold: true,
+                        fontSize: 13,
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Uang Sejumlah
+                      _buildReceiptField(
+                        label: 'Uang sejumlah :',
+                        value: CurrencyFormatter.format(widget.receipt.amount),
+                        isBold: true,
+                        fontSize: 18,
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Terbilang
+                      _buildReceiptField(
+                        label: 'Terbilang :',
+                        value: widget.receipt.amountWords,
+                        isItalic: false,
+                        fontSize: 12,
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Untuk Pembayaran
+                      _buildReceiptField(
+                        label: 'Untuk pembayaran :',
+                        value: widget.receipt.description,
+                        isBold: true,
+                        fontSize: 12,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildDashedLine(),
+                      const SizedBox(height: 14),
+
+                      // Date & Signature
+                      Align(
+                        alignment: is80mm ? Alignment.centerRight : Alignment.centerRight,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Batam, ${widget.receipt.dateFormatted}',
+                              style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+                            ),
+                            const SizedBox(height: 2),
+                            const Text(
+                              'Penerima,',
+                              style: TextStyle(fontFamily: 'monospace', fontSize: 11),
+                            ),
+                            const SizedBox(height: 40),
+                            const Text(
+                              '(_________________)',
+                              style: TextStyle(fontFamily: 'monospace', fontSize: 11),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+
+                      // Footer
+                      const Text(
+                        'Terima Kasih',
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(width: 14),
+            ),
+          ),
 
-              // [PRINT] Button
-              Expanded(
-                flex: 2,
-                child: ElevatedButton.icon(
-                  onPressed: printerService.isPrinting ? null : _handlePrint,
-                  icon: printerService.isPrinting
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Icon(Icons.print_rounded, size: 20),
-                  label: Text(
-                    printerService.isPrinting ? 'Mencetak...' : 'PRINT KWITANSI',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.5,
+          // Bottom Bar: [EDIT] and [🖨️ CETAK]
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(top: BorderSide(color: AppColors.border)),
+            ),
+            child: SafeArea(
+              child: Row(
+                children: [
+                  // EDIT Button
+                  Expanded(
+                    flex: 1,
+                    child: OutlinedButton(
+                      onPressed: () {
+                        Navigator.pushReplacementNamed(
+                          context,
+                          AppRoutes.receiptForm,
+                          arguments: widget.receipt,
+                        );
+                      },
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: const Color(0xFFF1F5F9),
+                        side: const BorderSide(color: Color(0xFFCBD5E1)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text(
+                        'EDIT',
+                        style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.text),
+                      ),
                     ),
                   ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  const SizedBox(width: 14),
+
+                  // CETAK Button
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton.icon(
+                      onPressed: printerService.isPrinting ? null : _handlePrint,
+                      icon: printerService.isPrinting
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Icon(Icons.print_rounded, size: 20),
+                      label: Text(
+                        printerService.isPrinting ? 'Mencetak...' : 'CETAK',
+                        style: const TextStyle(fontWeight: FontWeight.w800, letterSpacing: 0.5),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaperOption({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
+              size: 14,
+              color: isSelected ? Colors.white : AppColors.secondaryText,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? Colors.white : AppColors.secondaryText,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildThermalDivider(String char) {
+  Widget _buildDashedLine() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final count = (constraints.maxWidth / 8.5).floor();
+        final count = (constraints.maxWidth / 6.0).floor();
         return Text(
-          char * (count > 0 ? count : 32),
+          '- ' * (count > 0 ? count : 20),
           style: const TextStyle(
             fontFamily: 'monospace',
-            fontSize: 12,
-            color: AppColors.thermalBorder,
-            letterSpacing: 1,
+            fontSize: 10,
+            color: Color(0xFF94A3B8),
           ),
           maxLines: 1,
           overflow: TextOverflow.clip,
@@ -436,43 +397,12 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
     );
   }
 
-  Widget _buildThermalRow({required String left, required String right}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          left,
-          style: const TextStyle(
-            fontFamily: 'monospace',
-            fontSize: 12,
-            color: AppColors.thermalInk,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            right,
-            textAlign: TextAlign.right,
-            style: const TextStyle(
-              fontFamily: 'monospace',
-              fontSize: 12,
-              color: AppColors.thermalInk,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildThermalSection({
+  Widget _buildReceiptField({
     required String label,
     required String value,
     bool isBold = false,
     bool isItalic = false,
-    double fontSize = 13,
+    double fontSize = 12,
   }) {
     return Align(
       alignment: Alignment.centerLeft,
@@ -483,7 +413,7 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
             label,
             style: const TextStyle(
               fontFamily: 'monospace',
-              fontSize: 11,
+              fontSize: 10,
               color: AppColors.secondaryText,
             ),
           ),
@@ -493,10 +423,9 @@ class _ReceiptPreviewPageState extends State<ReceiptPreviewPage> {
             style: TextStyle(
               fontFamily: 'monospace',
               fontSize: fontSize,
-              fontWeight: isBold ? FontWeight.w800 : FontWeight.normal,
+              fontWeight: isBold ? FontWeight.w900 : FontWeight.w500,
               fontStyle: isItalic ? FontStyle.italic : FontStyle.normal,
               color: AppColors.thermalInk,
-              height: 1.3,
             ),
           ),
         ],
