@@ -1,0 +1,59 @@
+import 'package:flutter/material.dart';
+import 'package:audira_receipt/features/dashboard/dashboard_page.dart';
+import 'package:audira_receipt/features/printer/bluetooth_scan_page.dart';
+import 'package:audira_receipt/features/printer/printer_test_page.dart';
+import 'package:audira_receipt/features/receipt/receipt_detail_page.dart';
+import 'package:audira_receipt/features/receipt/receipt_form_page.dart';
+import 'package:audira_receipt/features/receipt/receipt_preview_page.dart';
+import 'package:audira_receipt/features/settings/company_profile_page.dart';
+import 'package:audira_receipt/features/splash/splash_page.dart';
+import 'package:audira_receipt/models/receipt.dart';
+
+class AppRoutes {
+  AppRoutes._();
+
+  static const String splash = '/';
+  static const String main = '/main';
+  static const String receiptForm = '/receipt/form';
+  static const String receiptPreview = '/receipt/preview';
+  static const String receiptHistory = '/receipt/history';
+  static const String receiptDetail = '/receipt/detail';
+  static const String printer = '/printer';
+  static const String printerScan = '/printer/scan';
+  static const String printerTest = '/printer/test';
+  static const String settings = '/settings';
+  static const String companyProfile = '/settings/company';
+
+  static Route<dynamic> onGenerateRoute(RouteSettings routeSettings) {
+    switch (routeSettings.name) {
+      case splash:
+        return MaterialPageRoute(builder: (_) => const SplashPage());
+      case main:
+        final initialIndex = routeSettings.arguments as int? ?? 0;
+        return MaterialPageRoute(builder: (_) => DashboardPage(initialTab: initialIndex));
+      case receiptForm:
+        final receiptToEdit = routeSettings.arguments as Receipt?;
+        return MaterialPageRoute(
+          builder: (_) => ReceiptFormPage(editReceipt: receiptToEdit),
+        );
+      case receiptPreview:
+        final receipt = routeSettings.arguments as Receipt;
+        return MaterialPageRoute(
+          builder: (_) => ReceiptPreviewPage(receipt: receipt),
+        );
+      case receiptDetail:
+        final receipt = routeSettings.arguments as Receipt;
+        return MaterialPageRoute(
+          builder: (_) => ReceiptDetailPage(receipt: receipt),
+        );
+      case printerScan:
+        return MaterialPageRoute(builder: (_) => const BluetoothScanPage());
+      case printerTest:
+        return MaterialPageRoute(builder: (_) => const PrinterTestPage());
+      case companyProfile:
+        return MaterialPageRoute(builder: (_) => const CompanyProfilePage());
+      default:
+        return MaterialPageRoute(builder: (_) => const SplashPage());
+    }
+  }
+}
