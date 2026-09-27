@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.audira.receipt.audira_receipt"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

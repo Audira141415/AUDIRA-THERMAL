@@ -245,32 +245,40 @@ class _PrinterConnectedPageState extends State<PrinterConnectedPage> {
                   const Divider(height: 16, color: AppColors.divider),
 
                   // Auto Cut Switch
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text(
-                      'Auto Cut (jika didukung)',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.text),
-                    ),
-                    value: settings.autoCut,
-                    activeThumbColor: AppColors.primary,
-                    onChanged: (val) {
-                      receiptService.updateSettings(settings.copyWith(autoCut: val));
-                    },
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Auto Cut (jika didukung)',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.text),
+                      ),
+                      Switch(
+                        value: settings.autoCut,
+                        activeColor: AppColors.primary,
+                        onChanged: (val) {
+                          receiptService.updateSettings(settings.copyWith(autoCut: val));
+                        },
+                      ),
+                    ],
                   ),
                   const Divider(height: 16, color: AppColors.divider),
 
                   // Cetak Logo Switch
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text(
-                      'Cetak Logo',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.text),
-                    ),
-                    value: settings.printLogo,
-                    activeThumbColor: AppColors.primary,
-                    onChanged: (val) {
-                      receiptService.updateSettings(settings.copyWith(printLogo: val));
-                    },
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Cetak Logo',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.text),
+                      ),
+                      Switch(
+                        value: settings.printLogo,
+                        activeColor: AppColors.primary,
+                        onChanged: (val) {
+                          receiptService.updateSettings(settings.copyWith(printLogo: val));
+                        },
+                      ),
+                    ],
                   ),
                 ],
               ),
