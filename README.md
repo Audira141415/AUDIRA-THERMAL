@@ -209,3 +209,10 @@ File APK akan berada di:
 2. **Printer Terputus / Di luar Jangkauan**: Muncul dialog pemulihan dengan tombol **[Coba Lagi]** dan **[Pilih Printer]**.
 3. **Cegah Nomor Duplikat**: Menggunakan pengecekan ganda atomik di SQLite dan settings counter.
 4. **Validasi Form**: Mencegah input nominal 0 atau negatif, serta memvalidasi nama pembayar dan tujuan pembayaran.
+
+---
+
+## 📄 Lisensi
+
+Project ini dilisensikan di bawah lisensi **MIT License** - hak cipta oleh **Audira (Agus Dwi R)**. Lihat file [LICENSE](LICENSE) untuk rincian lengkap.
+
