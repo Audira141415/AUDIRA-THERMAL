@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:audira_receipt/app/routes.dart';
 import 'package:audira_receipt/core/constants/app_colors.dart';
 import 'package:audira_receipt/core/constants/app_constants.dart';
 import 'package:audira_receipt/core/services/bluetooth_service.dart';
 import 'package:audira_receipt/core/services/receipt_service.dart';
+import 'package:audira_receipt/core/utils/app_date_formatter.dart';
 import 'package:audira_receipt/core/utils/currency_formatter.dart';
+import 'package:audira_receipt/models/receipt.dart';
 import 'package:audira_receipt/features/printer/printer_page.dart';
 import 'package:audira_receipt/features/receipt/receipt_history_page.dart';
 import 'package:audira_receipt/features/settings/settings_page.dart';
+import 'package:audira_receipt/widgets/about_license_dialog.dart';
 import 'package:audira_receipt/widgets/custom_dialogs.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -99,75 +103,73 @@ class _DashboardView extends StatelessWidget {
 
   const _DashboardView({required this.onNavigateTab});
 
-  void _showBackupDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.backup_outlined, color: AppColors.primary),
-            SizedBox(width: 8),
-            Text('Backup Data'),
+  Future<void> _showBackupDialog(BuildContext context) async {
+    final receiptService = context.read<ReceiptService>();
+    try {
+      final jsonBackup = await receiptService.exportDatabaseBackup();
+      if (!context.mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.backup_outlined, color: AppColors.primary),
+              SizedBox(width: 8),
+              Text('Backup Data (JSON)'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Seluruh data transaksi dan pengaturan SQLite tersimpan dalam format JSON berikut:',
+                style: TextStyle(fontSize: 13, color: AppColors.secondaryText),
+              ),
+              const SizedBox(height: 10),
+              Container(
+                constraints: const BoxConstraints(maxHeight: 120),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: SingleChildScrollView(
+                  child: Text(
+                    jsonBackup,
+                    style: const TextStyle(fontFamily: 'monospace', fontSize: 10),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Tutup'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: jsonBackup));
+                Navigator.pop(ctx);
+                CustomDialogs.showSuccessSnackBar(context, 'Data JSON cadangan disalin ke clipboard');
+              },
+              icon: const Icon(Icons.copy_rounded, size: 16),
+              label: const Text('Salin JSON'),
+            ),
           ],
         ),
-        content: const Text(
-          'Semua data kwitansi dan pengaturan tersimpan secara offline di SQLite lokal perangkat Anda. Anda dapat mengekspor atau membuat cadangan database secara otomatis.',
-          style: TextStyle(fontSize: 13, color: AppColors.secondaryText),
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              CustomDialogs.showSuccessSnackBar(context, 'Data kwitansi berhasil dicadangkan ke penyimpanan lokal');
-            },
-            child: const Text('Cadangkan Sekarang'),
-          ),
-        ],
-      ),
-    );
+      );
+    } catch (e) {
+      CustomDialogs.showErrorSnackBar(context, 'Gagal mencadangkan data: $e');
+    }
   }
 
   void _showAboutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.info_outline, color: AppColors.primary),
-            SizedBox(width: 8),
-            Text('Tentang Aplikasi'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            Text(
-              AppConstants.appName,
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.text),
-            ),
-            SizedBox(height: 2),
-            Text(
-              '${AppConstants.appSubtitle} • v2.0.0',
-              style: TextStyle(fontSize: 13, color: AppColors.secondaryText),
-            ),
-            SizedBox(height: 12),
-            Text(
-              'Aplikasi pencetakan kwitansi langsung ke Bluetooth Thermal Printer ESC/POS (58mm & 80mm) secara offline-first tanpa melalui PDF.',
-              style: TextStyle(fontSize: 13, color: AppColors.secondaryText, height: 1.4),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Tutup'),
-          ),
-        ],
-      ),
-    );
+    AboutLicenseDialog.show(context);
   }
 
   @override
@@ -194,26 +196,54 @@ class _DashboardView extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          AppConstants.appName,
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
-                            letterSpacing: -0.3,
+                    Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.15),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.asset(
+                              'assets/images/app_logo.png',
+                              width: 40,
+                              height: 40,
+                              fit: BoxFit.cover,
+                            ),
                           ),
                         ),
-                        SizedBox(height: 2),
-                        Text(
-                          AppConstants.appSubtitle,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.white70,
-                          ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text(
+                              AppConstants.appName,
+                              style: TextStyle(
+                                fontSize: 19,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              AppConstants.appSubtitle,
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white70,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -444,6 +474,102 @@ class _DashboardView extends StatelessWidget {
                   ),
                   const SizedBox(height: 18),
 
+                  // 3.5. Template Kwitansi Banner (22+ Template)
+                  Container(
+                    margin: const EdgeInsets.only(top: 14, bottom: 16),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColors.primary.withOpacity(0.07),
+                          const Color(0xFFEFF6FF),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () => Navigator.pushNamed(context, AppRoutes.templateGallery),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.primary.withOpacity(0.3),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(Icons.style_rounded, color: Colors.white, size: 22),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            receiptService.activeTemplate.name,
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w800,
+                                              color: AppColors.text,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.primary,
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: const Text(
+                                            '22+ Pilihan',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${receiptService.activeTemplate.category} • Tap untuk ganti desain',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: AppColors.secondaryText,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.chevron_right_rounded, color: AppColors.primary),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
                   // 4. Quick Actions Grid (2 rows x 3 columns)
                   GridView.count(
                     crossAxisCount: 3,
@@ -453,6 +579,11 @@ class _DashboardView extends StatelessWidget {
                     crossAxisSpacing: 12,
                     childAspectRatio: 1.05,
                     children: [
+                      _buildGridActionItem(
+                        icon: Icons.style_outlined,
+                        label: 'Template (22+)',
+                        onTap: () => Navigator.pushNamed(context, AppRoutes.templateGallery),
+                      ),
                       _buildGridActionItem(
                         icon: Icons.history_rounded,
                         label: 'Riwayat',
@@ -464,14 +595,14 @@ class _DashboardView extends StatelessWidget {
                         onTap: () => onNavigateTab(2),
                       ),
                       _buildGridActionItem(
-                        icon: Icons.settings_outlined,
-                        label: 'Pengaturan',
-                        onTap: () => onNavigateTab(3),
+                        icon: Icons.storefront_outlined,
+                        label: 'Data Usaha',
+                        onTap: () => Navigator.pushNamed(context, AppRoutes.companyProfile),
                       ),
                       _buildGridActionItem(
-                        icon: Icons.storefront_outlined,
-                        label: 'Data Perusahaan',
-                        onTap: () => Navigator.pushNamed(context, AppRoutes.companyProfile),
+                        icon: Icons.inventory_2_outlined,
+                        label: 'Katalog Item',
+                        onTap: () => Navigator.pushNamed(context, AppRoutes.productCatalog),
                       ),
                       _buildGridActionItem(
                         icon: Icons.cloud_download_outlined,
@@ -479,17 +610,115 @@ class _DashboardView extends StatelessWidget {
                         onTap: () => _showBackupDialog(context),
                       ),
                       _buildGridActionItem(
-                        icon: Icons.info_outline_rounded,
-                        label: 'Tentang',
+                        icon: Icons.verified_user_outlined,
+                        label: 'Tentang & Lisensi',
                         onTap: () => _showAboutDialog(context),
                       ),
                     ],
                   ),
+
+                  // 5. Transaksi Terbaru Header & Cards
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Transaksi Terbaru',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.text),
+                      ),
+                      TextButton(
+                        onPressed: () => onNavigateTab(1),
+                        child: const Text('Lihat Semua', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  if (receiptService.receipts.isEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: const Center(
+                        child: Text(
+                          'Belum ada transaksi kwitansi. Klik "+ BUAT KWITANSI" di atas.',
+                          style: TextStyle(fontSize: 12, color: AppColors.secondaryText),
+                        ),
+                      ),
+                    )
+                  else
+                    Column(
+                      children: receiptService.receipts
+                          .take(3)
+                          .map((r) => _buildRecentReceiptTile(context, r))
+                          .toList(),
+                    ),
                 ],
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildRecentReceiptTile(BuildContext context, Receipt r) {
+    Color statusColor = AppColors.success;
+    if (r.status.contains('DP')) {
+      statusColor = const Color(0xFFD97706);
+    } else if (r.status == 'PELUNASAN') {
+      statusColor = const Color(0xFF2563EB);
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: ListTile(
+        onTap: () {
+          Navigator.pushNamed(context, AppRoutes.receiptDetail, arguments: r);
+        },
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+        leading: Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: statusColor.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(Icons.receipt_long_rounded, color: statusColor, size: 20),
+        ),
+        title: Text(
+          r.receiptNumber,
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.text),
+        ),
+        subtitle: Text(
+          '${r.receivedFrom} • ${AppDateFormatter.formatShort(r.date)}',
+          style: const TextStyle(fontSize: 11, color: AppColors.secondaryText),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              CurrencyFormatter.format(r.amount),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.text),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              r.status,
+              style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: statusColor),
+            ),
+          ],
+        ),
       ),
     );
   }

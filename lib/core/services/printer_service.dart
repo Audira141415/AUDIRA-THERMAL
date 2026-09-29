@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:audira_receipt/core/services/bluetooth_service.dart';
 import 'package:audira_receipt/core/utils/printer_utils.dart';
@@ -5,6 +6,8 @@ import 'package:audira_receipt/database/receipt_repository.dart';
 import 'package:audira_receipt/models/app_settings.dart';
 import 'package:audira_receipt/models/company.dart';
 import 'package:audira_receipt/models/receipt.dart';
+import 'package:audira_receipt/models/receipt_template.dart';
+import 'package:audira_receipt/models/thermal_printer.dart';
 
 class PrintResult {
   final bool success;
@@ -63,12 +66,24 @@ class PrinterService extends ChangeNotifier {
   Future<PrintResult> printTest({
     required String paperSize,
     required Company company,
+    Uint8List? logoBytes,
   }) async {
+    Uint8List? resolvedLogo = logoBytes;
+    if (resolvedLogo == null && company.logo != null && company.logo!.isNotEmpty) {
+      try {
+        final f = File(company.logo!);
+        if (await f.exists()) {
+          resolvedLogo = await f.readAsBytes();
+        }
+      } catch (_) {}
+    }
+
     return _executePrint(
       label: 'Test Print',
       generateBytes: () => PrinterUtils.generateTestPrintBytes(
         paperSize: paperSize,
         company: company,
+        logoBytes: resolvedLogo,
       ),
     );
   }
@@ -78,14 +93,39 @@ class PrinterService extends ChangeNotifier {
     required Receipt receipt,
     required Company company,
     required AppSettings settings,
+    String? paperSizeOverride,
+    ReceiptTemplate? template,
+    TemplateConfig? customConfig,
+    Uint8List? logoBytes,
   }) async {
+    final effectivePaperSize = paperSizeOverride ?? settings.paperSize;
+
+    Uint8List? resolvedLogo = logoBytes;
+    final isLogoEnabled = receipt.showLogo ?? (customConfig?.showLogo ?? true);
+    if (!isLogoEnabled) {
+      resolvedLogo = null;
+    } else if (resolvedLogo == null) {
+      final customPath = receipt.logoPath ?? company.logo;
+      if (customPath != null && customPath.isNotEmpty) {
+        try {
+          final f = File(customPath);
+          if (await f.exists()) {
+            resolvedLogo = await f.readAsBytes();
+          }
+        } catch (_) {}
+      }
+    }
+
     return _executePrint(
       label: 'Kwitansi #${receipt.receiptNumber}',
       generateBytes: () => PrinterUtils.generateReceiptEscPosBytes(
         receipt: receipt,
         company: company,
-        paperSize: settings.paperSize,
+        paperSize: effectivePaperSize,
         autoCut: settings.autoCut,
+        template: template,
+        customConfig: customConfig,
+        logoBytes: resolvedLogo,
       ),
     );
   }
@@ -100,13 +140,23 @@ class PrinterService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // 1. Check Bluetooth ON
-      final btEnabled = await bluetoothService.isBluetoothEnabled();
+      // 1. Check Bluetooth ON, auto-enable if off
+      var btEnabled = await bluetoothService.isBluetoothEnabled();
+      if (!btEnabled) {
+        _statusMessage = 'Mengaktifkan Bluetooth...';
+        notifyListeners();
+        await bluetoothService.enableBluetooth();
+        await Future.delayed(const Duration(milliseconds: 600));
+        btEnabled = await bluetoothService.isBluetoothEnabled();
+      }
+
       if (!btEnabled) {
         _isPrinting = false;
         _statusMessage = 'Bluetooth tidak aktif';
         notifyListeners();
-        return PrintResult.bluetoothOff();
+        return PrintResult.bluetoothOff(
+          message: 'Bluetooth belum diaktifkan. Silakan aktifkan Bluetooth di ponsel Anda.',
+        );
       }
 
       // 2. Check Permission
@@ -115,41 +165,52 @@ class PrinterService extends ChangeNotifier {
         _isPrinting = false;
         _statusMessage = 'Izin Bluetooth ditolak';
         notifyListeners();
-        return PrintResult.error('Izin Bluetooth belum diberikan.');
+        return PrintResult.error('Izin Bluetooth belum diberikan. Mohon berikan izin di Pengaturan.');
       }
 
-      // 3. Check Connection
-      if (!bluetoothService.isConnected) {
-        // Try auto connecting to default printer from database
-        _statusMessage = 'Mencari printer default...';
+      // 3. Check Physical Connection & Auto-Reconnect
+      bool isConnected = bluetoothService.isConnected;
+      if (isConnected) {
+        // Double check hardware RFCOMM socket is still responsive
+        final isAlive = await bluetoothService.checkActualConnection();
+        if (!isAlive) {
+          isConnected = false;
+        }
+      }
+
+      if (!isConnected) {
+        _statusMessage = 'Mencari printer terdaftar...';
         notifyListeners();
 
-        final defaultPrinter = await repository.getDefaultPrinter();
-        if (defaultPrinter != null) {
-          _statusMessage = 'Menyambungkan ke ${defaultPrinter.name}...';
+        ThermalPrinter? targetPrinter = bluetoothService.connectedPrinter;
+        targetPrinter ??= await repository.getDefaultPrinter();
+
+        if (targetPrinter != null) {
+          _statusMessage = 'Menyambungkan ke ${targetPrinter.name}...';
           notifyListeners();
 
-          final connected = await bluetoothService.connect(defaultPrinter);
+          final connected = await bluetoothService.connect(targetPrinter);
           if (!connected) {
             _isPrinting = false;
             _statusMessage = 'Gagal tersambung';
             notifyListeners();
-            return PrintResult.notConnected(
-              message: 'Tidak dapat tersambung ke printer ${defaultPrinter.name}.',
-            );
+            final detail = bluetoothService.lastErrorMessage.isNotEmpty
+                ? bluetoothService.lastErrorMessage
+                : 'Tidak dapat tersambung ke printer ${targetPrinter.name} (${targetPrinter.macAddress}). Pastikan printer menyala dan dekat.';
+            return PrintResult.notConnected(message: detail);
           }
         } else {
           _isPrinting = false;
           _statusMessage = 'Printer belum dipilih';
           notifyListeners();
           return PrintResult.notConnected(
-            message: 'Belum ada printer yang terhubung.',
+            message: 'Belum ada printer yang terhubung. Silakan pilih dan sambungkan printer terlebih dahulu.',
           );
         }
       }
 
       // 4. Generate ESC/POS Bytes
-      _statusMessage = 'Menyiapkan data cetak ESC/POS...';
+      _statusMessage = 'Menyiapkan data cetak...';
       notifyListeners();
       final bytes = generateBytes();
 
@@ -162,7 +223,10 @@ class PrinterService extends ChangeNotifier {
         _isPrinting = false;
         _statusMessage = 'Gagal mengirim data';
         notifyListeners();
-        return PrintResult.error('Printer gagal mencetak. Silakan periksa koneksi printer.');
+        final detail = bluetoothService.lastErrorMessage.isNotEmpty
+            ? bluetoothService.lastErrorMessage
+            : 'Printer tidak merespons atau koneksi terputus saat mencetak. Pastikan printer menyala dan kertas tidak habis.';
+        return PrintResult.error(detail);
       }
 
       _statusMessage = 'Pencetakan selesai';

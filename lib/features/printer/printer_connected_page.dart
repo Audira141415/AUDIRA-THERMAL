@@ -21,8 +21,9 @@ class _PrinterConnectedPageState extends State<PrinterConnectedPage> {
     final receiptService = context.watch<ReceiptService>();
     final settings = receiptService.settings;
 
-    final printerName = btService.connectedPrinter?.name ?? 'XP-58 Bluetooth';
-    final macAddress = btService.connectedPrinter?.macAddress ?? '00:11:22:33:44:55';
+    final isConnected = btService.isConnected && btService.connectedPrinter != null;
+    final printerName = btService.connectedPrinter?.name ?? 'Tidak Ada Printer Terhubung';
+    final macAddress = btService.connectedPrinter?.macAddress ?? 'Tidak Terhubung';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -44,7 +45,7 @@ class _PrinterConnectedPageState extends State<PrinterConnectedPage> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: isConnected ? AppColors.success : AppColors.border),
               ),
               child: Column(
                 children: [
@@ -82,10 +83,10 @@ class _PrinterConnectedPageState extends State<PrinterConnectedPage> {
                           bottom: 12,
                           right: 14,
                           child: Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: AppColors.success,
+                            width: 10,
+                            height: 10,
+                            decoration: BoxDecoration(
+                              color: isConnected ? AppColors.success : AppColors.danger,
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -118,20 +119,24 @@ class _PrinterConnectedPageState extends State<PrinterConnectedPage> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppColors.successLight,
+                      color: isConnected ? AppColors.successLight : const Color(0xFFFEF2F2),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Icon(Icons.check_circle, size: 12, color: AppColors.success),
-                        SizedBox(width: 4),
+                      children: [
+                        Icon(
+                          isConnected ? Icons.check_circle : Icons.cancel_outlined,
+                          size: 12,
+                          color: isConnected ? AppColors.success : AppColors.danger,
+                        ),
+                        const SizedBox(width: 4),
                         Text(
-                          'Terhubung',
+                          isConnected ? 'Terhubung' : 'Terputus',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.success,
+                            color: isConnected ? AppColors.success : AppColors.danger,
                           ),
                         ),
                       ],
@@ -152,9 +157,11 @@ class _PrinterConnectedPageState extends State<PrinterConnectedPage> {
                         icon: Icons.aspect_ratio_rounded,
                         label: 'Atur Kertas',
                         onTap: () {
-                          final newSize = settings.paperSize == AppConstants.paper58mm
-                              ? AppConstants.paper80mm
-                              : AppConstants.paper58mm;
+                          final newSize = settings.paperSize == AppConstants.paper48mm
+                              ? AppConstants.paper58mm
+                              : (settings.paperSize == AppConstants.paper58mm
+                                  ? AppConstants.paper80mm
+                                  : AppConstants.paper48mm);
                           receiptService.updateSettings(settings.copyWith(paperSize: newSize));
                           CustomDialogs.showSuccessSnackBar(context, 'Kertas diubah ke $newSize');
                         },
@@ -204,11 +211,17 @@ class _PrinterConnectedPageState extends State<PrinterConnectedPage> {
                   Row(
                     children: [
                       _buildRadioOption(
+                        label: '48 mm',
+                        isSelected: settings.paperSize == AppConstants.paper48mm,
+                        onTap: () => receiptService.updateSettings(settings.copyWith(paperSize: AppConstants.paper48mm)),
+                      ),
+                      const SizedBox(width: 18),
+                      _buildRadioOption(
                         label: '58 mm',
                         isSelected: settings.paperSize == AppConstants.paper58mm,
                         onTap: () => receiptService.updateSettings(settings.copyWith(paperSize: AppConstants.paper58mm)),
                       ),
-                      const SizedBox(width: 24),
+                      const SizedBox(width: 18),
                       _buildRadioOption(
                         label: '80 mm',
                         isSelected: settings.paperSize == AppConstants.paper80mm,
@@ -285,27 +298,46 @@ class _PrinterConnectedPageState extends State<PrinterConnectedPage> {
             ),
             const SizedBox(height: 24),
 
-            // 3. PUTUSKAN PRINTER Button
+            // 3. Action Button (PUTUSKAN if connected, or HUBUNGKAN if disconnected)
             SizedBox(
               width: double.infinity,
               height: 48,
-              child: ElevatedButton(
-                onPressed: () async {
-                  await btService.disconnect();
-                  if (context.mounted) {
-                    CustomDialogs.showSuccessSnackBar(context, 'Printer diputuskan');
-                    Navigator.pop(context);
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFEF4444),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: const Text(
-                  'PUTUSKAN PRINTER',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, letterSpacing: 0.5),
-                ),
-              ),
+              child: isConnected
+                  ? ElevatedButton.icon(
+                      onPressed: () async {
+                        final pName = btService.connectedPrinter?.name ?? 'Printer';
+                        await btService.disconnect();
+                        if (context.mounted) {
+                          CustomDialogs.showSuccessSnackBar(context, '$pName berhasil diputuskan');
+                          Navigator.pop(context);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFEF4444),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      icon: const Icon(Icons.link_off_rounded, size: 18),
+                      label: const Text(
+                        'PUTUSKAN PRINTER',
+                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, letterSpacing: 0.5),
+                      ),
+                    )
+                  : ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pushReplacementNamed(context, AppRoutes.printerScan);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      icon: const Icon(Icons.bluetooth_searching_rounded, size: 18),
+                      label: const Text(
+                        'PILIH & HUBUNGKAN PRINTER',
+                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, letterSpacing: 0.5),
+                      ),
+                    ),
             ),
           ],
         ),

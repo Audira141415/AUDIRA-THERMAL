@@ -11,9 +11,9 @@ class PrinterPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final btService = context.watch<BluetoothService>();
-    final isConnected = btService.isConnected;
-    final printerName = btService.connectedPrinter?.name ?? (isConnected ? 'XP-58 Bluetooth' : 'Belum Ada Printer');
-    final macAddress = btService.connectedPrinter?.macAddress ?? (isConnected ? '00:11:22:33:44:55' : 'Tidak Terhubung');
+    final isConnected = btService.isConnected && btService.connectedPrinter != null;
+    final printerName = btService.connectedPrinter?.name ?? 'Belum Ada Printer';
+    final macAddress = btService.connectedPrinter?.macAddress ?? 'Tidak Terhubung';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -25,13 +25,15 @@ class PrinterPage extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // 1. Top Card: Printer Aktif
+            // 1. Top Card: Printer Aktif / Terputus
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.border),
+                border: Border.all(
+                  color: isConnected ? AppColors.success : AppColors.border,
+                ),
               ),
               child: Row(
                 children: [
@@ -39,10 +41,14 @@ class PrinterPage extends StatelessWidget {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: isConnected ? AppColors.success : AppColors.secondaryText,
+                      color: isConnected ? AppColors.successLight : const Color(0xFFF1F5F9),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.print_rounded, color: Colors.white, size: 24),
+                    child: Icon(
+                      Icons.print_rounded,
+                      color: isConnected ? AppColors.success : AppColors.secondaryText,
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -51,10 +57,10 @@ class PrinterPage extends StatelessWidget {
                       children: [
                         Text(
                           isConnected ? 'Printer Aktif' : 'Printer Terputus',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.secondaryText,
+                            fontWeight: FontWeight.w700,
+                            color: isConnected ? AppColors.success : AppColors.secondaryText,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -81,9 +87,10 @@ class PrinterPage extends StatelessWidget {
                   if (isConnected)
                     OutlinedButton(
                       onPressed: () async {
+                        final pName = btService.connectedPrinter?.name ?? 'Printer';
                         await btService.disconnect();
                         if (context.mounted) {
-                          CustomDialogs.showSuccessSnackBar(context, 'Printer diputuskan');
+                          CustomDialogs.showSuccessSnackBar(context, '$pName berhasil diputuskan');
                         }
                       },
                       style: OutlinedButton.styleFrom(

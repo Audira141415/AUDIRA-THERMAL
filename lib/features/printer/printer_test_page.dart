@@ -4,6 +4,7 @@ import 'package:audira_receipt/core/constants/app_colors.dart';
 import 'package:audira_receipt/core/constants/app_constants.dart';
 import 'package:audira_receipt/core/services/printer_service.dart';
 import 'package:audira_receipt/core/services/receipt_service.dart';
+import 'package:audira_receipt/core/utils/printer_utils.dart';
 import 'package:audira_receipt/widgets/custom_dialogs.dart';
 import 'package:audira_receipt/widgets/thermal_ticket_container.dart';
 
@@ -55,12 +56,65 @@ class _PrinterTestPageState extends State<PrinterTestPage> {
       ),
       body: Column(
         children: [
+          // Top Paper Size Selector Row
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Ukuran Kertas',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.secondaryText,
+                  ),
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    children: [
+                      _buildPaperOption(
+                        label: '48 mm',
+                        isSelected: settings.paperSize == AppConstants.paper48mm,
+                        onTap: () => receiptService.updateSettings(
+                          settings.copyWith(paperSize: AppConstants.paper48mm),
+                        ),
+                      ),
+                      _buildPaperOption(
+                        label: '58 mm',
+                        isSelected: settings.paperSize == AppConstants.paper58mm,
+                        onTap: () => receiptService.updateSettings(
+                          settings.copyWith(paperSize: AppConstants.paper58mm),
+                        ),
+                      ),
+                      _buildPaperOption(
+                        label: '80 mm',
+                        isSelected: settings.paperSize == AppConstants.paper80mm,
+                        onTap: () => receiptService.updateSettings(
+                          settings.copyWith(paperSize: AppConstants.paper80mm),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: AppColors.border),
+
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
               child: Center(
                 child: ThermalTicketContainer(
-                  maxWidth: settings.paperSize == AppConstants.paper80mm ? 400 : 320,
+                  maxWidth: settings.paperSize == AppConstants.paper80mm
+                      ? 400
+                      : (settings.paperSize == AppConstants.paper48mm ? 275 : 320),
                   child: Column(
                     children: [
                       // Header
@@ -87,9 +141,13 @@ class _PrinterTestPageState extends State<PrinterTestPage> {
                       const SizedBox(height: 10),
 
                       // Meta
-                      _buildTwoCol('Model', ': XP-58'),
+                      _buildTwoCol(
+                        'Model',
+                        ': ${settings.paperSize == AppConstants.paper48mm ? 'XP-48 (48mm)' : (settings.paperSize == AppConstants.paper80mm ? 'XP-80 (80mm)' : 'XP-58 (58mm)')}',
+                      ),
                       _buildTwoCol('Paper', ': ${settings.paperSize}'),
-                      _buildTwoCol('Date', ': 27/09/2026 10:24'),
+                      _buildTwoCol('Width', ': ${PrinterUtils.getWidth(settings.paperSize)} Karakter'),
+                      _buildTwoCol('Date', ': 28/09/2026 10:24'),
                       const SizedBox(height: 10),
                       _buildDashedLine(),
                       const SizedBox(height: 10),
@@ -253,6 +311,32 @@ class _PrinterTestPageState extends State<PrinterTestPage> {
           overflow: TextOverflow.clip,
         );
       },
+    );
+  }
+
+  Widget _buildPaperOption({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: isSelected ? Colors.white : AppColors.secondaryText,
+          ),
+        ),
+      ),
     );
   }
 }

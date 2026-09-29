@@ -6,10 +6,12 @@ class AppConstants {
   static const String appVersion = '1.0.0';
 
   // Printer Paper Sizes
+  static const String paper48mm = '48mm';
   static const String paper58mm = '58mm';
   static const String paper80mm = '80mm';
 
   // Paper character widths
+  static const int paper48WidthChars = 24;
   static const int paper58WidthChars = 32;
   static const int paper80WidthChars = 48;
 

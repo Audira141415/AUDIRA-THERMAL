@@ -9,6 +9,8 @@ class AppSettings {
   final bool printLogo;
   final int printDensity;
   final String characterSize;
+  final String activeTemplateId;
+  final String templateConfigsJson;
 
   AppSettings({
     this.id,
@@ -19,6 +21,8 @@ class AppSettings {
     this.printLogo = false,
     this.printDensity = 2,
     this.characterSize = 'normal',
+    this.activeTemplateId = 'standard_formal',
+    this.templateConfigsJson = '{}',
   });
 
   factory AppSettings.defaultSettings() {
@@ -31,6 +35,8 @@ class AppSettings {
       printLogo: false,
       printDensity: 2,
       characterSize: 'normal',
+      activeTemplateId: 'standard_formal',
+      templateConfigsJson: '{}',
     );
   }
 
@@ -43,6 +49,8 @@ class AppSettings {
     bool? printLogo,
     int? printDensity,
     String? characterSize,
+    String? activeTemplateId,
+    String? templateConfigsJson,
   }) {
     return AppSettings(
       id: id ?? this.id,
@@ -53,6 +61,8 @@ class AppSettings {
       printLogo: printLogo ?? this.printLogo,
       printDensity: printDensity ?? this.printDensity,
       characterSize: characterSize ?? this.characterSize,
+      activeTemplateId: activeTemplateId ?? this.activeTemplateId,
+      templateConfigsJson: templateConfigsJson ?? this.templateConfigsJson,
     );
   }
 
@@ -66,6 +76,8 @@ class AppSettings {
       'print_logo': printLogo ? 1 : 0,
       'print_density': printDensity,
       'character_size': characterSize,
+      'active_template_id': activeTemplateId,
+      'template_configs_json': templateConfigsJson,
     };
   }
 
@@ -79,6 +91,8 @@ class AppSettings {
       printLogo: (map['print_logo'] as int? ?? 0) == 1,
       printDensity: map['print_density'] as int? ?? 2,
       characterSize: map['character_size'] as String? ?? 'normal',
+      activeTemplateId: map['active_template_id'] as String? ?? 'standard_formal',
+      templateConfigsJson: map['template_configs_json'] as String? ?? '{}',
     );
   }
 }

@@ -63,7 +63,7 @@ class CustomDialogs {
     return result ?? false;
   }
 
-  /// Show Print Failure Dialog with [Coba Lagi] and [Pilih Printer]
+  /// Show Print Failure Dialog with clear diagnostic explanation and quick troubleshooting
   static Future<void> showPrintFailureDialog({
     required BuildContext context,
     required String errorMessage,
@@ -73,31 +73,78 @@ class CustomDialogs {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
+        titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+        contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+        title: Row(
           children: [
-            Icon(Icons.error_outline, color: AppColors.danger, size: 26),
-            SizedBox(width: 10),
-            Expanded(
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.danger.withOpacity(0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.error_outline_rounded, color: AppColors.danger, size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
               child: Text(
                 'Printer Gagal Mencetak',
                 style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
                   color: AppColors.text,
                 ),
               ),
             ),
           ],
         ),
-        content: Text(
-          errorMessage.isNotEmpty
-              ? errorMessage
-              : 'Terjadi kendala saat mengirim data ke printer thermal. Pastikan printer dalam keadaan aktif dan terhubung via Bluetooth.',
-          style: const TextStyle(
-            fontSize: 14,
-            color: AppColors.secondaryText,
-            height: 1.4,
-          ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFFECACA)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.info_outline, size: 16, color: AppColors.danger),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      errorMessage.isNotEmpty
+                          ? errorMessage
+                          : 'Koneksi ke printer thermal terputus atau tidak merespons.',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF991B1B),
+                        fontWeight: FontWeight.w600,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'Panduan Pengecekan Cepat:',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppColors.text,
+              ),
+            ),
+            const SizedBox(height: 6),
+            _buildTroubleshootItem('1. Pastikan printer dalam keadaan HIDUP (Power ON).'),
+            _buildTroubleshootItem('2. Cek lampu indikator printer (tidak berkedip merah / kertas tidak habis).'),
+            _buildTroubleshootItem('3. Dekatkan HP dengan printer (jarak maksimal 3-5 meter).'),
+            _buildTroubleshootItem('4. Jika belum pernah terhubung, silakan Scan & Pairing printer terlebih dahulu.'),
+          ],
         ),
         actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         actions: [
@@ -113,7 +160,7 @@ class CustomDialogs {
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-            child: const Text('Pilih Printer'),
+            child: const Text('Scan & Pilih Printer', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -127,9 +174,23 @@ class CustomDialogs {
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-            child: const Text('Coba Lagi'),
+            child: const Text('Hubungkan & Coba Lagi', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
           ),
         ],
+      ),
+    );
+  }
+
+  static Widget _buildTroubleshootItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 11,
+          color: AppColors.secondaryText,
+          height: 1.3,
+        ),
       ),
     );
   }

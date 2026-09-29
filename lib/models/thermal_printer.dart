@@ -8,6 +8,7 @@ class ThermalPrinter {
   final bool isDefault;
   final DateTime createdAt;
   final bool isConnected;
+  final bool isBonded;
 
   ThermalPrinter({
     this.id,
@@ -17,6 +18,7 @@ class ThermalPrinter {
     this.isDefault = false,
     DateTime? createdAt,
     this.isConnected = false,
+    this.isBonded = true,
   }) : createdAt = createdAt ?? DateTime.now();
 
   ThermalPrinter copyWith({
@@ -27,6 +29,7 @@ class ThermalPrinter {
     bool? isDefault,
     DateTime? createdAt,
     bool? isConnected,
+    bool? isBonded,
   }) {
     return ThermalPrinter(
       id: id ?? this.id,
@@ -36,6 +39,7 @@ class ThermalPrinter {
       isDefault: isDefault ?? this.isDefault,
       createdAt: createdAt ?? this.createdAt,
       isConnected: isConnected ?? this.isConnected,
+      isBonded: isBonded ?? this.isBonded,
     );
   }
 

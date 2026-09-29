@@ -61,26 +61,27 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Printer Icon
+                    // Official AUDIRA App Logo
                     Container(
-                      width: 96,
-                      height: 96,
+                      width: 108,
+                      height: 108,
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(28),
+                        borderRadius: BorderRadius.circular(26),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.12),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8),
+                            color: Colors.black.withOpacity(0.25),
+                            blurRadius: 24,
+                            offset: const Offset(0, 10),
                           ),
                         ],
                       ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.print_rounded,
-                          size: 54,
-                          color: AppColors.primary,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(26),
+                        child: Image.asset(
+                          'assets/images/app_logo.png',
+                          width: 108,
+                          height: 108,
+                          fit: BoxFit.cover,
                         ),
                       ),
                     ),
