@@ -214,7 +214,9 @@ File APK akan berada di:
 
 ## 📄 Lisensi
 
-Project ini dilisensikan di bawah lisensi **MIT License** - hak cipta oleh **Audira (Agus Dwi R)**. Lihat file [LICENSE](LICENSE) untuk rincian lengkap.
+Project ini dilisensikan di bawah **Lisensi Komersial / Proprietary (All Rights Reserved)** oleh **Agus Dwi Rianto (AUDIRA) / Audira Multimedia Digital / Audira Sukses Mandiri**. 
+
+Penggunaan komersial, distribusi, dan modifikasi kode sumber tunduk pada lisensi berbayar resmi. Lihat file [LICENSE](LICENSE) untuk ketentuan lengkap. Untuk informasi pembelian lisensi atau kemitraan, hubungi [agusdwirianto@gmail.com](mailto:agusdwirianto@gmail.com) atau WhatsApp [+62 821-1200-1600](https://wa.me/6282112001600).
 
 ---
 

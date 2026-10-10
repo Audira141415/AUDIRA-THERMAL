@@ -78,8 +78,8 @@ if %errorlevel% equ 0 (
     echo.
     echo ========================================================
     echo  [GAGAL] Terjadi kendala saat push.
-    echo  Pastikan Anda telah login/memberikan izin akun GitHub
-    echo  (Personal Access Token atau Git Credential Manager).
+    echo  Pastikan Anda telah login atau memberikan izin akun GitHub:
+    echo  Gunakan Personal Access Token atau Git Credential Manager.
     echo ========================================================
 )
 

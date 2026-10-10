@@ -37,6 +37,7 @@ All product names, source code, designs, and associated intellectual property ar
 - **Official Brand**: AUDIRA
 - **Founder**: Agus Dwi Rianto
 - **Organization**: Audira Multimedia Digital / Audira Sukses Mandiri
+- **License**: Commercial / Proprietary (Berbayar - All Rights Reserved)
 - **Website**: [https://audira.my.id](https://audira.my.id)
 - **Official Email**: [agusdwirianto@gmail.com](mailto:agusdwirianto@gmail.com)
 
