@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 
-title Save & Commit AUDIRA-THERMAL
+title Save and Sync AUDIRA-THERMAL
 cd /d "%~dp0"
 
 echo ========================================================
